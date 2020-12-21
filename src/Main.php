@@ -6,7 +6,8 @@ namespace GFRestrictIP;
 
 use \WP_Error;
 use \GForms;
-use GFRestrictIP\Main\Rest;
+use GFRestrictIP\Main\Ajax;
+use GFRestrictIP\Main\Page;
 
 /**
  * Class GFRestrictIP
@@ -18,6 +19,21 @@ class Main
 	 * @var self Plugin instance.
 	 */
 	private static $instance;
+
+	/**
+	 * @var int Attempt limit by IP
+	 */
+	private static $AttemptLimit = 8;
+
+	/**
+	 * @var int Form ID
+	 */
+	private static $formId = 2;
+
+	/**
+	 * @var int Field ID
+	 */
+	private static $fieldId = 7;
 
 	/**
 	 * @return self Plugin instance.
@@ -32,16 +48,6 @@ class Main
 	}
 
 	/**
-	 * @var int Attempt limit by IP
-	 */
-	private static $AttemptLimit = 8;
-
-	/**
-	 * @var string RestAPI token
-	 */
-	public static $token = '1ssdxkVe9T3nLYRWkF4Mnybasd';
-
-	/**
 	 * Plugin constructor.
 	 */
 	public function __construct() {
@@ -49,7 +55,7 @@ class Main
 		add_filter( 'gform_pre_render', [ $this, 'GFRestrictIPCheckRestriction' ] );
 		add_action( 'gform_pre_submission', [ $this, 'GFRestrictIPCheckRestriction' ] );
 
-		add_filter( 'gform_field_validation_2_7', function ( $result, $value, $form, $field ) {
+		add_filter( "gform_field_validation_" . self::$formId . "_" . self::$fieldId, function ( $result, $value, $form, $field ) {
 			if ( $result['is_valid'] == false ) {
 				$this->GFRestrictIPAddCount();
 			}
@@ -57,15 +63,10 @@ class Main
 			return $result;
 		}, 10, 4 );
 
-		//add_action('wp_enqueue_scripts', [$this, 'adminScripts']);
-		add_action('rest_api_init', [$this, 'registerRestMethods']);
-	}
-
-	/**
-	 * Register REST methods
-	 */
-	public function registerRestMethods() {
-		new Rest\Admin();
+		//Ajax registration
+		new Ajax\Admin();
+		//Page registration
+		new Main\Page();
 	}
 
 	public function GFRestrictIPCheckRestriction( $form ) {
