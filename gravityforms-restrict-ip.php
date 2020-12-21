@@ -23,9 +23,11 @@ if (!class_exists('GFRestrictIP\Main')) {
 	$autoloader('GFRestrictIP\\Main', __DIR__ . '/src/Main');
 }
 
-if (!class_exists('\GForms')) {
-	\esc_html('<div class="error notice"> <p><strong>Gravity Forms should be installed.</strong></p></div>');
-}
+add_action( 'admin_init', function() {
+	if ( !\is_plugin_active('gravityforms/gravityforms.php') ) {
+		echo __('<div class="error notice"> <p><strong>GravityForms Restrict Forms: Gravity Forms should be installed.</strong></p></div>');
+	}
+});
 
 function GFRestrictIPActivation() {
 	global $wpdb;
@@ -45,17 +47,6 @@ function GFRestrictIPActivation() {
 
 }
 register_activation_hook( __FILE__, 'GFRestrictIPActivation');
-
-function GFRestrictIPClearIP( $links ) {
-	$homeURL = get_home_url();
-	$settings_link = "<a target='_blank' href='$homeURL/wp-json/gfrestrictip/v1/clear_ip_addresses?token=1ssdxkVe9T3nLYRWkF4Mnybasd'>Clear List of IPs</a>";
-	array_unshift($links, $settings_link);
-	return $links;
-}
-
-$plugin = plugin_basename(__FILE__);
-add_filter("plugin_action_links_$plugin", 'GFRestrictIPClearIP' );
-
 
 add_action('gform_loaded', function () {
 	Main::init();
