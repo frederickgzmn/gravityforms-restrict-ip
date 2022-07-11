@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /*
-Plugin Name: GravityForms Restrict Forms
+Plugin Name: Restrict IPs for GravityForms
 Plugin URI: https://infostreamusa.com
 Description: Gravityforms block malicious IP addresses attempting bypassing the captcha
 Version: 1.0
