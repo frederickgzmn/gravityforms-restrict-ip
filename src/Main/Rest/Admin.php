@@ -1,4 +1,9 @@
 <?php
+/**
+ * Full strict types.
+
+ *  @package GFRestrictIP/Rest
+ */
 
 declare(strict_types=1);
 
@@ -8,22 +13,37 @@ use GFRestrictIP\Main;
 
 /**
  * API Class Admin
- * @package GFRestrictIP\Rest
+
+ * @package Admin
  */
 class Admin {
 
+	/**
+	 * Rest api constructor
+	 */
 	public function __construct() {
-		//GET
-		register_rest_route('gfrestrictip/v1', 'clear_ip_addresses', [
-			'methods' => 'GET',
-			'callback' => [$this, 'ClearIPAddresses'],
-		]);
+
+		register_rest_route(
+			'gfrestrictip/v1',
+			'clear_ip_addresses',
+			array(
+				'methods'  => 'GET',
+				'callback' => array( $this, 'clear_ip_addresses' ),
+			)
+		);
 	}
 
-	public function ClearIPAddresses(\WP_REST_Request $params): bool {
-		if ( $params->get_param('token') == Main::$token ) {
+	/**
+	 * Action rest api
+	 *
+	 * @param \WP_REST_Request $params fields sent by ajax.
+	 * @return boolean
+	 */
+	public function clear_ip_addresses( \WP_REST_Request $params ): bool {
+		if ( $params->get_param( 'token' ) === Main::$token ) {
 			Main::clear_ip_list();
 		}
+
 		return true;
 	}
 }

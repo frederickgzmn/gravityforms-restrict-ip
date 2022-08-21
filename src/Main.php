@@ -1,4 +1,9 @@
 <?php
+/**
+ * Full strict types.
+
+ *  @package GFRestrictIP
+ */
 
 declare(strict_types=1);
 
@@ -9,22 +14,23 @@ use \GForms;
 use GFRestrictIP\Main\Rest;
 
 /**
- * Class GFRestrictIP
- * @package GFRestrictIP
+ * Class Main
  */
-class Main
-{
+class Main {
 	/**
-	 * @var self Plugin instance.
+	 * Plugin instance.
+
+	 * @var self
 	 */
 	private static $instance;
 
 	/**
-	 * @return self Plugin instance.
+	 * Plugin instance.
+
+	 * @return self
 	 */
-	public static function init(): self
-	{
-		if (self::$instance === null) {
+	public static function init(): self {
+		if ( null === self::$instance ) {
 			self::$instance = new self;
 		}
 
@@ -32,103 +38,149 @@ class Main
 	}
 
 	/**
-	 * @var int Attempt limit by IP
+	 *  Attempt limit by IP
+
+	 * @var int
 	 */
-	private static $AttemptLimit = 8;
+	private static $attempt_limit = 8;
 
 	/**
-	 * @var string RestAPI token
+	 *  RestAPI token
+
+	 * @var string
 	 */
-	public static $token = '1ssdxkVe9T3nLYRWkF4Mnybasd';
+	public static $token = '1ssdxkVe9T3nLYRWkF4Mnybasd'; // test token.
 
 	/**
 	 * Plugin constructor.
 	 */
 	public function __construct() {
-		add_filter( 'gform_validation', [ $this, 'GFRestrictIPValidation' ] );
-		add_filter( 'gform_pre_render', [ $this, 'GFRestrictIPCheckRestriction' ] );
-		add_action( 'gform_pre_submission', [ $this, 'GFRestrictIPCheckRestriction' ] );
+		add_filter( 'gform_validation', array( $this, 'gf_restrict_ip_validation' ) );
+		add_filter( 'gform_pre_render', array( $this, 'gf_restrict_ip_check_restriction' ) );
+		add_action( 'gform_pre_submission', array( $this, 'gf_restrict_ip_check_restriction' ) );
 
-		add_filter( 'gform_field_validation_2_7', function ( $result, $value, $form, $field ) {
-			if ( $result['is_valid'] == false ) {
-				$this->GFRestrictIPAddCount();
-			}
+		add_filter(
+			'gform_field_validation_2_7',
+			function ( $result, $value, $form, $field ) {
+				if ( false === $result['is_valid'] ) {
+					$this->gf_restrict_ip_add_count();
+				}
 
-			return $result;
-		}, 10, 4 );
+				return $result;
+			},
+			10,
+			4,
+		);
 
-		//add_action('wp_enqueue_scripts', [$this, 'adminScripts']);
-		add_action('rest_api_init', [$this, 'registerRestMethods']);
+		add_action( 'rest_api_init', array( $this, 'register_rest_methods' ) );
 	}
 
 	/**
 	 * Register REST methods
 	 */
-	public function registerRestMethods() {
+	public function register_rest_methods() {
 		new Rest\Admin();
 	}
 
-	public function GFRestrictIPCheckRestriction( $form ) {
+	/**
+	 * Apply restriction to users.
+	 *
+	 * @param [GravityForm] $form Gravity form object.
+	 * @return [GravityForm] $form Gravity form object.
+	 */
+	public function gf_restrict_ip_check_restriction( $form ) {
 
-		$totalAttempt = $this->GFRestrictIPCount();
+		$total_attempt = $this->gf_restrict_ip_count();
 
-		if ( $totalAttempt >= self::$AttemptLimit ) {
-			echo "<style>.gform_not_found { display: none }</style>";
-			return esc_html_e("Sorry! You have exceeded the allowed payment attempts for 1 day.  Please try again in 24 hours, or to process payment now please call us at 1-800-52-MUSIC!", 'text-GFRestrictIP');
+		if ( $total_attempt >= self::$attempt_limit ) {
+			echo esc_attr( '<style>.gform_not_found { display: none }</style>' );
+			return esc_html_e( 'Sorry! You have exceeded the allowed payment attempts for 1 day.  Please try again in 24 hours, or to process payment now please call us at 1-800-52-MUSIC!', 'text-GFRestrictIP' );
 		}
 
 		return $form;
 	}
 
-	public function GFRestrictIPValidation( $validation_result ) {
-		if ( !$validation_result['is_valid'] ) {
-			$this->GFRestrictIPAddCount();
+	/**
+	 * Validation of the IP address detected.
+
+	 * @param [array] $validation_result IP detected.
+	 * @return array
+	 */
+	public function gf_restrict_ip_validation( array $validation_result ) {
+		if ( ! $validation_result['is_valid'] ) {
+			$this->gf_restrict_ip_add_count();
 		}
 
 		return $validation_result;
 	}
 
-	private function GFRestrictIPCount () {
+	/**
+	 * Count of ip addresses blocked
+
+	 * @return mixed
+	 */
+	private function gf_restrict_ip_count() {
 		global $wpdb;
 
-		$ip = $this->getIP();
-		$gfrestrictip_table_name  = $wpdb->prefix . GFREIP_TABLE_NAME;
+		$ip = $this->get_ip();
+		$gfrestrictip_table_name = $wpdb->prefix . GFREIP_TABLE_NAME;
 
-		$rowcount = $wpdb->get_var("SELECT count FROM {$gfrestrictip_table_name} WHERE ip = '{$ip}'");
+		$rowcount = $wpdb->get_var( $wpdb->prepare( 'SELECT count FROM %s WHERE ip = %s', $gfrestrictip_table_name, $ip ) );
 
 		return $rowcount ? $rowcount : false;
 	}
 
-	private function GFRestrictIPAddCount () {
+	/**
+	 * Add ip address to the block list
+
+	 * @return void
+	 */
+	private function gf_restrict_ip_add_count() {
 		global $wpdb;
 
-		$ip = $this->getIP();
-		$gfrestrictip_table_name  = $wpdb->prefix . GFREIP_TABLE_NAME;
+		$ip                      = $this->get_ip();
+		$gfrestrictip_table_name = $wpdb->prefix . GFREIP_TABLE_NAME;
 
-		$rowcount = $wpdb->get_var("SELECT count FROM {$gfrestrictip_table_name} WHERE ip = '{$ip}'");
+		$rowcount = $wpdb->get_var( $wpdb->prepare( 'SELECT count FROM %s WHERE ip = %s', $gfrestrictip_table_name, $ip ) );
 
-		$countQly = $rowcount ? $rowcount : false;
+		$count_qly = $rowcount ? $rowcount : false;
 
-		if ( $countQly === false ) {
-			$return = $wpdb->query( "INSERT INTO {$gfrestrictip_table_name} (ip, count)
-    		VALUES('{$ip}', 1)" );
+		if ( false === $count_qly ) {
+			$return = $wpdb->query( $wpdb->prepare( 'INSERT INTO %s ( ip, count ) VALUES ( %s, 1 )', $gfrestrictip_table_name, $ip ) );
 		} else {
-			$count_query = $countQly + 1;
-			$return = $wpdb->query( "UPDATE {$gfrestrictip_table_name} SET count = {$count_query} WHERE ip = '{$ip}'" );
+			$count_query = $count_qly + 1;
+			$return = $wpdb->query( $wpdb->prepare( 'UPDATE %s SET count = %d WHERE ip = %s', $gfrestrictip_table_name, $count_query, $ip ) );
+		}
+	}
+
+	/**
+	 * Clear the list of ip addresses blocked.
+
+	 * @return bol
+	 */
+	public static function clear_ip_list() {
+		global $wpdb;
+		$gfrestrictip_table_name = $wpdb->prefix . GFREIP_TABLE_NAME;
+
+		return $wpdb->query( $wpdb->prepare( 'DELETE FROM %s WHERE 1=1', $gfrestrictip_table_name ) );
+	}
+
+	/**
+	 * Get the ip address detected by the server from the browser.
+
+	 * @return string
+	 */
+	private function get_ip() {
+		$ip_address = '';
+
+		if ( ! empty( $_SERVER['HTTP_CLIENT_IP'] ) ) {
+			$ip_address = sanitize_text_field( wp_unslash( $_SERVER['HTTP_CLIENT_IP'] ) );
+		} elseif ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+			$ip_address = sanitize_text_field( wp_unslash( $_SERVER['HTTP_CLIENT_IP'] ) );
+		} else {
+			$ip_address = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
 		}
 
-		return $return;
-	}
-
-	public static function clear_ip_list () {
-		global $wpdb;
-		$gfrestrictip_table_name  = $wpdb->prefix . GFREIP_TABLE_NAME;
-		return $wpdb->query( "DELETE FROM {$gfrestrictip_table_name} WHERE  1=1" );
-	}
-
-	private function getIP() {
-		$ip = $_SERVER['HTTP_CLIENT_IP'] ? $_SERVER['HTTP_CLIENT_IP'] : ($_SERVER['HTTP_X_FORWARDED_FOR'] ? $_SERVER['HTTP_X_FORWARDED_FOR'] : $_SERVER['REMOTE_ADDR']);
-
-		return $ip;
+		return $ip_address;
 	}
 }
